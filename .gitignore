@@ -1,4 +1,2 @@
 # build directories
-bin/
-lib/
-build/
+_*/
