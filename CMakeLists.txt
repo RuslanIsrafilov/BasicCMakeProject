@@ -26,33 +26,47 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${PROJECT_LIB_DIR_RELEASE})
 # set compilers options
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
    add_definitions(-Wno-deprecated -std=c++11)
-   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
+   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
+   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Od")
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
    add_definitions(/EHsc)
    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Ox")
+   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Od")
 endif()
 
-# set common include folder for project
-set(SOURCES_DIR ${PROJECT_SOURCE_DIR}/src)
-set(COMMON_INCLUDES ${SOURCES_DIR})
+# set project common variables
+set(COMMON_SOURCES ${PROJECT_SOURCE_DIR}/src)
+set(TEST_SOURCES ${PROJECT_SOURCE_DIR}/test)
+set(COMON_INCLUDES ${COMMON_SOURCES})
+set(COMON_TEST_INCLUDES ${TEST_SOURCES})
+set(EX_MAIN_FILE ${COMMON_SOURCES}/main.cpp)
+set(EX_MAIN_TEST_FILE ${TEST_SOURCES}/main.cpp)
+set(GTEST_ROOT ${PROJECT_SOURCE_DIR}/ext/gtest)
+set(GTEST_INCLUDES ${GTEST_ROOT}/include)
 
-# build main library
-include_directories(${COMMON_INCLUDES})
-file(GLOB SRC_FILES ${SOURCES_DIR}/*.cpp)
-file(GLOB SRC_EX_FILES ${SOURCES_DIR}/*.cxx)
-add_library(${PROJECT_NAME}_static ${SRC_FILES})
-add_executable(${PROJECT_NAME} ${SRC_EX_FILES})
-target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_static)
-
-# build tests
 if(BUILD_TESTS)
-  set(GTEST_ROOT ${PROJECT_SOURCE_DIR}/ext/gtest)
-  set(GTEST_INCLUDES ${GTEST_ROOT}/include)
   include_directories(${GTEST_INCLUDES} ${GTEST_ROOT})
   add_library(gtest ${GTEST_ROOT}/src/gtest-all.cc)
-
-  include_directories(${COMMON_INCLUDES} ${GTEST_INCLUDES})
-  file(GLOB SRC_TEST_FILES ${PROJECT_SOURCE_DIR}/test/*.cpp)
-  add_executable(${PROJECT_NAME}_test ${SRC_TEST_FILES})
-  target_link_libraries(${PROJECT_NAME}_test ${PROJECT_NAME}_static gtest)
 endif()
+
+# enumerate project modules
+set(EXAMPLE_MODULE_DIR ${PROJECT_SOURCE_DIR}/src/example)
+set(EXAMPLE_MODULE_TEST_DIR ${PROJECT_SOURCE_DIR}/test/example)
+
+# build example_module
+include_directories(${COMON_INCLUDES} ${EXAMPLE_MODULE_DIR})
+file(GLOB EXAMPLE_MODULE_SRC_FILES ${EXAMPLE_MODULE_DIR}/*.cpp)
+add_library(example_module_static ${EXAMPLE_MODULE_SRC_FILES})
+
+# build tests for exmaple_module
+if(BUILD_TESTS)
+  include_directories(${COMMON_INCLUDES} ${COMON_TEST_INCLUDES} ${EXAMPLE_MODULE_DIR} ${GTEST_INCLUDES})
+  file(GLOB EXAMPLE_MODULE_TEST_FILES ${EXAMPLE_MODULE_TEST_DIR}/*.cpp)
+  add_executable(example_module_test ${EX_MAIN_TEST_FILE} ${EXAMPLE_MODULE_TEST_FILES})
+  target_link_libraries(example_module_test example_module_static gtest)
+endif()
+
+# add executable
+include_directories(${COMON_INCLUDES} ${EXAMPLE_MODULE_DIR})
+add_executable(${PROJECT_NAME} ${EX_MAIN_FILE})
+target_link_libraries(${PROJECT_NAME} example_module_static)
